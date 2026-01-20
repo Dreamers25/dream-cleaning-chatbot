@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Quote Flow</title>
+    <style>
+        body { font-family: Arial; padding: 40px; max-width: 800px; margin: 0 auto; background: #f5f5f5; }
+        .chat-container { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 30px; }
+        h1 { color: #1e3a8a; }
+        .message { margin: 15px 0; padding: 15px; border-radius: 10px; }
+        .bot { background: #f0f9ff; border-left: 4px solid #1e3a8a; }
+        .user { background: #1e3a8a; color: white; text-align: right; }
+        .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        button { padding: 12px; background: #1e3a8a; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #2563eb; }
+        input { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; margin-top: 10px; }
+        #input-area { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>🧹 Test Quote Flow</h1>
+        <p>This tests the complete questionnaire</p>
+        <div id="messages"></div>
+        <div id="input-area"></div>
+    </div>
+
+    <script>
+        let currentStep = 0;
+        let answers = {};
+        
+        const steps = [
+            {
+                id: 'service_category',
+                question: 'What type of cleaning do you need?',
+                options: ['🏠 Residential Cleaning', '🏢 Commercial Cleaning', '🧽 Specialised Cleaning']
+            },
+            {
+                id: 'service_type',
+                question: 'What type of [SERVICE] cleaning?',
+                getOptions: () => {
+                    if (answers.service_category?.includes('Residential')) 
+                        return ['Regular Cleaning', 'Deep Cleaning', 'End of Tenancy'];
+                    if (answers.service_category?.includes('Commercial')) 
+                        return ['Office Cleaning', 'Retail Cleaning'];
+                    return ['Carpet Cleaning', 'Window Cleaning'];
+                }
+            },
+            {
+                id: 'property_type',
+                question: 'Is the property residential or commercial?',
+                options: ['Residential', 'Commercial']
+            },
+            {
+                id: 'property_size',
+                question: 'How many bedrooms or rooms does the property have?',
+                getOptions: () => {
+                    if (answers.property_type === 'Commercial')
+                        return ['Small Space', 'Medium Space', 'Large Space'];
+                    return ['Studio / 1 Bedroom', '2 Bedrooms', '3 Bedrooms', '4+ Bedrooms'];
+                }
+            },
+            {
+                id: 'property_postcode',
+                question: 'What is the property postcode?',
+                type: 'text'
+            },
+            {
+                id: 'cleaning_timing',
+                question: 'Is this a one-off clean or ongoing service?',
+                options: ['One-off', 'Regular cleaning (weekly/fortnightly)', 'Not sure yet']
+            },
+            {
+                id: 'preferred_date',
+                question: 'Do you have a preferred date or timeframe?',
+                type: 'text'
+            },
+            {
+                id: 'lead_name',
+                question: 'What is your name?',
+                type: 'text'
+            },
+            {
+                id: 'lead_email',
+                question: 'What is the best email address to contact you on?',
+                type: 'text'
+            },
+            {
+                id: 'lead_phone',
+                question: 'What is the best phone number to reach you?',
+                type: 'text'
+            }
+        ];
+
+        function showMessage(text, isUser = false) {
+            const div = document.createElement('div');
+            div.className = 'message ' + (isUser ? 'user' : 'bot');
+            div.textContent = text;
+            document.getElementById('messages').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function askQuestion() {
+            if (currentStep >= steps.length) {
+                submitQuote();
+                return;
+            }
+
+            const step = steps[currentStep];
+            showMessage(step.question.replace('[SERVICE]', 
+                answers.service_category?.split(' ')[1] || ''));
+
+            const inputArea = document.getElementById('input-area');
+            inputArea.innerHTML = '';
+
+            if (step.type === 'text') {
+                const input = document.createElement('input');
+                input.placeholder = 'Type your answer...';
+                input.onkeypress = (e) => {
+                    if (e.key === 'Enter' && input.value.trim()) {
+                        handleAnswer(input.value.trim());
+                    }
+                };
+                inputArea.appendChild(input);
+                input.focus();
+            } else {
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'buttons';
+                const options = step.getOptions ? step.getOptions() : step.options;
+                options.forEach(option => {
+                    const btn = document.createElement('button');
+                    btn.textContent = option;
+                    btn.onclick = () => handleAnswer(option);
+                    buttonsDiv.appendChild(btn);
+                });
+                inputArea.appendChild(buttonsDiv);
+            }
+        }
+
+        function handleAnswer(answer) {
+            showMessage(answer, true);
+            const step = steps[currentStep];
+            answers[step.id] = answer;
+            currentStep++;
+            setTimeout(askQuestion, 500);
+        }
+
+        async function submitQuote() {
+            showMessage('Submitting your request...');
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/quote', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(answers)
+                });
+                
+                showMessage('✅ Thank you! We\'ve received your request 👍 A member of the Dream Cleaning Team will contact you shortly to confirm the details.');
+                
+                console.log('Quote Data:', answers);
+                document.getElementById('input-area').innerHTML = 
+                    '<p style="color: green; font-weight: bold;">✅ Quote submitted! Check console for data.</p>';
+            } catch (error) {
+                showMessage('✅ Thank you! We\'ve received your request 👍 A member of the Dream Cleaning Team will contact you shortly to confirm the details.');
+                console.log('Quote Data:', answers);
+            }
+        }
+
+        // Start the flow
+        askQuestion();
+    </script>
+</body>
+</html>

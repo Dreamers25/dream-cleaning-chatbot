@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Chatbot</title>
+    <style>
+        body { font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto; }
+        input { width: 100%; padding: 10px; font-size: 16px; margin-bottom: 10px; }
+        button { padding: 10px 30px; font-size: 16px; background: #1e3a8a; color: white; border: none; cursor: pointer; }
+        button:hover { background: #2563eb; }
+        #response { margin-top: 20px; padding: 15px; background: #f0f9ff; border-left: 4px solid #1e3a8a; }
+    </style>
+</head>
+<body>
+    <h1>🧹 Dream Cleaning Chatbot Test</h1>
+    <p>Ask any question about our services!</p>
+    
+    <input type="text" id="question" placeholder="e.g., What services do you offer?" />
+    <button onclick="askQuestion()">Ask Question</button>
+    
+    <div id="response" style="display:none;">
+        <strong>Answer:</strong><br><br>
+        <span id="answer"></span>
+    </div>
+
+    <script>
+        async function askQuestion() {
+            const question = document.getElementById('question').value;
+            if (!question) return;
+            
+            document.getElementById('response').innerHTML = 'Thinking...';
+            document.getElementById('response').style.display = 'block';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: question})
+                });
+                const data = await response.json();
+                document.getElementById('response').innerHTML = '<strong>Answer:</strong><br><br>' + data.response;
+            } catch (error) {
+                document.getElementById('response').innerHTML = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
